@@ -7,10 +7,9 @@
 #include <sys/socket.h>  // socket(), bind()
 #include <netinet/in.h>  // struct sockaddr , struct sockaddr_in
 #include <string.h>
-#define BUFSIZE 100
-#define M_USER 30
+#define BUFSIZE 200
+#define MAXUSER 200
 
-int total_user=0;
 void error_handling(char *message)
 {
     fputs(message, stderr);
@@ -23,74 +22,20 @@ typedef struct _List{
     char nickname[30];
 }List;
 
-// typedef struct _linkedList{
-//     struct _node *head;
-//     struct _node *tail;
-// }linkedList;
-
-// typedef struct _node{
-//     int sock_num;
-//     char nickname[100];
-//     struct _node *next;
-// }node;
-
-// void addNewUser(linkedList *L, int sknum, char * name){
-//     node *newNode = (node *)malloc(sizeof(node));
-//     newNode -> sock_num = sknum;
-//     strcpy(newNode->nickname, name);
-//     newNode ->next = NULL;
-    
-//     if(L->head == NULL){
-//         L->head = L->tail = newNode;
-//     }
-//     else{
-//         L->tail->next = newNode;
-//         L->tail = newNode;
-//     }
-// }
-
-// void deleteUser(linkedList *L, int sknum){
-//     node * curr = L->head;
-//     node * prev = NULL;
-
-//     while(curr != NULL){
-//         if(L->head->sock_num == sknum){
-//             L->head = curr->next;
-//             curr->next = NULL;
-//             free(curr);
-//             curr = L->head;
-//         }
-//         else if(curr->sock_num == sknum){
-//             prev->next = curr->next;
-//             free(curr);
-//             curr = prev->next;
-//         }
-//         else{
-//             prev = curr;
-//             curr = curr->next;
-//         }
-//     }
-// }
-
 
 int main(int argc, char **argv){
     int serv_sock;
     struct sockaddr_in serv_addr;
 
     fd_set reads, temps;
-    int i, fd_max;
+    int i, fd_max, str_len;
     char message[BUFSIZE];
     char message2[BUFSIZE];
     char nicknames[BUFSIZE];
-    int str_len;
-    struct timeval timeout;
-    //linkedList *L = (linkedList *)malloc(sizeof(linkedList));
-    //L->head = NULL;
-    //L->tail = NULL;
-    total_user = 0;
-    List list[100];
+    List list[MAXUSER];
+    //struct timeval timeout;
 
-    for(i=0; i<100; i++){
+    for(i=0; i<MAXUSER; i++){
         list[i].join = 0;
     }
 
@@ -121,9 +66,6 @@ int main(int argc, char **argv){
         struct sockaddr_in clnt_addr;
 
         temps = reads;
-        timeout.tv_sec = 5;
-        timeout.tv_usec = 0;
-        printf("zz\n");
         if(select(fd_max+1, &temps, 0, 0, NULL) == -1){
             error_handling("select() error");
         }
@@ -137,7 +79,6 @@ int main(int argc, char **argv){
                     
                     list[clnt_sock].join = 1;
                     strcpy(list[clnt_sock].nickname, nicknames);
-                    total_user++;
                     sprintf(message, "client %d join, nickname : %s\n", clnt_sock, nicknames);
                     for(i=0; i<fd_max+1; i++){// let exist user that new client join
                         if(FD_ISSET(i, &reads) && (i != serv_sock)){
@@ -145,8 +86,9 @@ int main(int argc, char **argv){
                         }
                     }
                     // let new clinet know the list of nickname who is join in chatting
-                    // write(clnt_sock, list, sizeof(List)*200);
-                    // printf("%d",sizeof(List)*200);
+                    int size = sizeof(List)*MAXUSER;
+                    write(clnt_sock, &size, sizeof(size));
+                    size = write(clnt_sock, list, sizeof(List)*MAXUSER);
 
                     FD_SET(clnt_sock, &reads);
                     if(fd_max <clnt_sock){
@@ -164,7 +106,6 @@ int main(int argc, char **argv){
                             }
                         }
                         list[fd].join = 0;
-                        total_user--;
                         FD_CLR(fd, &reads);
                         close(fd);
                         printf("closed client: %d\n", fd);
