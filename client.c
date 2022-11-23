@@ -42,7 +42,7 @@ int main(int argc, char **argv){
 
     int total_byte=0, read_byte, size;
     read(sockfd, &size, sizeof(size));
-    printf("%d",size);
+    //printf("%d",size);
     while(total_byte < size){
         if((read_byte = read(sockfd, &list[total_byte/sizeof(List)], sizeof(List)*50))>0){
             total_byte += read_byte;
